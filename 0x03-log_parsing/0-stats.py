@@ -17,9 +17,7 @@ def parse_log_entry(log_entry):
         'status': 0,
         'bytes_sent': 0,
     }
-    log_format = '{}\\-{}{}{}{}\\s*'.format(patterns[0], patterns[1],
-                                            patterns[2],
-                                            patterns[3], patterns[4])
+    log_format = '{}\\-{}{}{}{}\\s*'.format(patterns[0], patterns[1], patterns[2], patterns[3], patterns[4])
     match = re.fullmatch(log_format, log_entry)
     if match is not None:
         status = match.group('status')
