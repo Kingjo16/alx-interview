@@ -1,83 +1,87 @@
 #!/usr/bin/python3
-'''A script for parsing HTTP request logs.'''
+'''Module analizing HTTP request logs.'''
 import re
 
-# Precompiled regex pattern for performance improvement
-LOG_PATTERN = re.compile(
-    r'\s*(?P<ip>\S+)\s*'
-    r'\s*\[(?P<date>\d+\-\d+\-\d+ \d+:\d+:\d+\.\d+)\]'
-    r'\s*"(?P<request>[^"]*)"\s*'
-    r'\s*(?P<status_code>\S+)'
-    r'\s*(?P<file_size>\d+)\s*'
-)
 
-def extract_input(input_line):
-    '''Extracts sections of a line of an HTTP request log.
-    
-    Args:
-        input_line (str): A single line from the HTTP request log.
-
-    Returns:
-        dict: A dictionary with status code and file size.
+def parse_log_entry(log_entry):
+    '''Extracts components from a line of an HTTP request log.
     '''
-    info = {'status_code': '0', 'file_size': 0}
-    match = LOG_PATTERN.fullmatch(input_line)
-    if match:
-        info['status_code'] = match.group('status_code')
-        info['file_size'] = int(match.group('file_size'))
-    return info
+    patterns = (
+        r'\s*(?P<ip_address>\S+)\s*',
+        r'\s*\[(?P<timestamp>\d+\-\d+\-\d+ \d+:\d+:\d+\.\d+)\]',
+        r'\s*"(?P<http_request>[^"]*)"\s*',
+        r'\s*(?P<status>\S+)',
+        r'\s*(?P<bytes_sent>\d+)'
+    )
+    data = {
+        'status': 0,
+        'bytes_sent': 0,
+    }
+    log_format = '{}\\-{}{}{}{}\\s*'.format(patterns[0], patterns[1], patterns[2], patterns[3], patterns[4])
+    match = re.fullmatch(log_format, log_entry)
+    if match is not None:
+        status = match.group('status')
+        bytes_sent = int(match.group('bytes_sent'))
+        data['status'] = status
+        data['bytes_sent'] = bytes_sent
+    return data
 
-def print_statistics(total_file_size, status_codes_stats):
-    '''Prints the accumulated statistics of the HTTP request log.
-    
-    Args:
-        total_file_size (int): The total size of files transferred.
-        status_codes_stats (dict): A dictionary of status code counts.
+
+def display_summary(total_bytes, status_counts):
+    '''Displays the aggregated statistics of the HTTP request log.
     '''
-    print(f'File size: {total_file_size}', flush=True)
-    for status_code, count in sorted(status_codes_stats.items()):
+    print('File size: {:d}'.format(total_bytes), flush=True)
+    for status in sorted(status_counts.keys()):
+        count = status_counts.get(status, 0)
         if count > 0:
-            print(f'{status_code}: {count}', flush=True)
+            print('{:s}: {:d}'.format(status, count), flush=True)
 
-def update_metrics(line, total_file_size, status_codes_stats):
-    '''Updates the metrics from a given HTTP request log.
-    
+
+def accumulate_metrics(log_entry, total_bytes, status_counts):
+    '''Accumulates the metrics from a given HTTP request log.
+
     Args:
-        line (str): The line of input from which to retrieve the metrics.
-        total_file_size (int): The current total file size.
-        status_codes_stats (dict): A dictionary of status code counts.
+        log_entry (str): The line of input from which to retrieve the metrics.
 
     Returns:
-        int: The new total file size.
+        int: The updated total file size.
     '''
-    line_info = extract_input(line)
-    status_code = line_info['status_code']
-    if status_code in status_codes_stats:
-        status_codes_stats[status_code] += 1
-    return total_file_size + line_info['file_size']
+    entry_data = parse_log_entry(log_entry)
+    status = entry_data.get('status', '0')
+    if status in status_counts.keys():
+        status_counts[status] += 1
+    return total_bytes + entry_data['bytes_sent']
 
-def run():
-    '''Starts the log parser.'''
-    line_num = 0
-    total_file_size = 0
-    status_codes_stats = {
-        '200': 0, '301': 0, '400': 0, '401': 0,
-        '403': 0, '404': 0, '405': 0, '500': 0,
+
+def main():
+    '''Executes the log analyzer.
+    '''
+    line_count = 0
+    total_bytes = 0
+    status_counts = {
+        '200': 0,
+        '301': 0,
+        '400': 0,
+        '401': 0,
+        '403': 0,
+        '404': 0,
+        '405': 0,
+        '500': 0,
     }
     try:
         while True:
-            line = input()
-            total_file_size = update_metrics(
-                line,
-                total_file_size,
-                status_codes_stats,
+            log_entry = input()
+            total_bytes = accumulate_metrics(
+                log_entry,
+                total_bytes,
+                status_counts,
             )
-            line_num += 1
-            if line_num % 10 == 0:
-                print_statistics(total_file_size, status_codes_stats)
+            line_count += 1
+            if line_count % 10 == 0:
+                display_summary(total_bytes, status_counts)
     except (KeyboardInterrupt, EOFError):
-        print_statistics(total_file_size, status_codes_stats)
+        display_summary(total_bytes, status_counts)
+
 
 if __name__ == '__main__':
-    run()
-
+    main()
