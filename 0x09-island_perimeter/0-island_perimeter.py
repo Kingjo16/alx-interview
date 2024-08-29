@@ -2,31 +2,22 @@
 """Module for computing the perimeter of an island in a grid."""
 
 
-def compute_island_perimeter(matrix):
+def island_perimeter(g):
     """Calculate the perimeter of an island with no internal lakes."""
-    total_perimeter = 0
-    if type(matrix) != list:
+    p = 0
+    if type(g) != list:
         return 0
-    num_rows = len(matrix)
-    for row_index, current_row in enumerate(matrix):
-        num_cols = len(current_row)
-        for col_index, cell_value in enumerate(current_row):
-            if cell_value == 0:
+    n = len(g)
+    for i, r in enumerate(g):
+        m = len(r)
+        for j, c in enumerate(r):
+            if c == 0:
                 continue
-            adjacent_edges = (
-                row_index == 0 or (
-                    len(matrix[row_index - 1]) > col_index and
-                    matrix[row_index - 1][col_index] == 0
-                ),
-                col_index == num_cols - 1 or (
-                    num_cols > col_index + 1 and
-                    current_row[col_index + 1] == 0
-                ),
-                row_index == num_rows - 1 or (
-                    len(matrix[row_index + 1]) > col_index and
-                    matrix[row_index + 1][col_index] == 0
-                ),
-                col_index == 0 or current_row[col_index - 1] == 0,
+            e = (
+                i == 0 or (len(g[i - 1]) > j and g[i - 1][j] == 0),
+                j == m - 1 or (m > j + 1 and r[j + 1] == 0),
+                i == n - 1 or (len(g[i + 1]) > j and g[i + 1][j] == 0),
+                j == 0 or r[j - 1] == 0,
             )
-            total_perimeter += sum(adjacent_edges)
-    return total_perimeter
+            p += sum(e)
+    return p
